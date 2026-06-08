@@ -1,0 +1,43 @@
+name: "🔬 Research / Spike"
+description: "Investigate, prototype, or explore an open question"
+title: "[Research]: "
+labels: ["research"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / Goal
+      description: What are we trying to learn or decide?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Background / Context
+      description: Why now? What prompted this investigation?
+    validations:
+      required: false
+  - type: textarea
+    id: approach
+    attributes:
+      label: Approach
+      description: How will you investigate? Experiments, references, prototypes.
+    validations:
+      required: false
+  - type: textarea
+    id: deliverable
+    attributes:
+      label: Expected Outcome / Deliverable
+      description: What does "done" produce? (doc, recommendation, prototype, decision)
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: input
+    id: timebox
+    attributes:
+      label: Timebox
+      description: How much time is allocated before reporting back?
+      placeholder: "e.g. 2 days"
+    validations:
+      required: false
