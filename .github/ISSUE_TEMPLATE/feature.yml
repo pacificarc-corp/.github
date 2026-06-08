@@ -1,0 +1,44 @@
+name: "✨ Feature"
+description: "Propose a new feature or enhancement"
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this solve? Who is it for?
+      placeholder: "Today users can't... so they have to..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature and how it should behave.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / Acceptance Criteria
+      description: Bullet list of what "done" looks like.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches you weighed and why you ruled them out.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Context
+      description: Mockups, links, dependencies, related issues.
+    validations:
+      required: false
