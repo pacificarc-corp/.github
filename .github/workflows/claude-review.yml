@@ -1,0 +1,90 @@
+name: Claude PR Review (reusable)
+
+# Shared, org-wide PR reviewer. Individual repos call this via `workflow_call`
+# and supply the triggers (pull_request / issue_comment) + repo-specific focus.
+# Auth is the org-level CLAUDE_CODE_OAUTH_TOKEN (minted from a Max subscription),
+# passed through by the caller with `secrets: inherit`.
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: Claude model the reviewer runs on.
+        required: false
+        type: string
+        default: claude-opus-4-8
+      extra_instructions:
+        description: Repo-specific review emphasis appended to the base prompt.
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  review:
+    # PR events always run. Comment events only run when "@claude" is mentioned on a PR.
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        uses: anthropics/claude-code-action@a92e7c70a4da9793dc164451d829089dc057a464 # v1
+        with:
+          # Auth via the org-level OAuth token (subscription-backed, no metered API key).
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Create/update a tracking comment so the review is posted to the PR.
+          track_progress: 'true'
+          # Grant the tools Claude needs to POST the review (inline + summary),
+          # otherwise it reviews into the run log and posts nothing.
+          claude_args: >-
+            --model ${{ inputs.model }}
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+          prompt: |
+            You are a senior staff engineer performing a rigorous pull request review.
+            Review ONLY the changes introduced by this PR (the diff against the base
+            branch), but read the surrounding code for context. First read any
+            CLAUDE.md, AGENTS.md, and .cursor/rules/*.mdc files in the repo and hold
+            this PR to those conventions.
+
+            Organize your review under these headings, and only include a heading if
+            you have findings for it:
+
+            1. Architecture & convention adherence — does it follow the repo's
+               established patterns, module boundaries, routing/state/data-flow
+               conventions, naming, and the explicit rules in CLAUDE.md / AGENTS.md?
+               Call out any deviation and cite the rule it breaks.
+            2. Security — authn/authz, input validation, injection, secret/credential
+               handling, unsafe data flows, SSRF/XSS/CSRF, and risky dependencies.
+            3. Infrastructure & operational safety — CI/CD, IaC, config, DB
+               migrations, backward compatibility, rollout/rollback risk, cost or
+               resource implications, and observability gaps.
+            4. Correctness & bugs — logic errors, edge cases, error handling, races.
+            5. Tests — coverage of the change and missing cases.
+
+            For every finding give: `file:line`, a severity tag
+            (Blocker / High / Medium / Low / Nit), what is wrong, and a concrete fix.
+            Report everything you find with its severity — do NOT pre-filter for
+            importance; a downstream reader will triage. Leave inline comments on the
+            exact lines when you can, plus one summary comment.
+
+            Finish the summary with a single verdict line:
+            - `REVIEW: APPROVE` if there are no Blocker or High findings.
+            - `REVIEW: CHANGES REQUESTED (<n> blocking)` otherwise.
+
+            Be specific and ground every point in the repo's own conventions or in the
+            diff. Do not rubber-stamp.
+
+            ## Repo-specific focus
+            ${{ inputs.extra_instructions }}
+
+            IMPORTANT — you MUST post the review to the PR, not just print it:
+            - For each specific finding, leave an inline comment on the exact line
+              using the `mcp__github_inline_comment__create_inline_comment` tool.
+            - Post the summary and the final `REVIEW:` verdict line as a top-level PR
+              comment using `gh pr comment`.
+            Do not end your turn until the review is posted to the PR via these tools.
